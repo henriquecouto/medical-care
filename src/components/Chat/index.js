@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { makeStyles } from '@material-ui/styles'
-import { Paper, Input, Typography, Grid } from '@material-ui/core'
+import { Paper, Input, Typography, Grid, Button } from '@material-ui/core'
 
 import Message from '../Message';
 
@@ -17,13 +17,14 @@ const useStyles = makeStyles(theme => ({
     backgroundColor: theme.palette.primary.light,
     padding: theme.spacing(1),
     borderRadius: 3,
-    marginTop: theme.spacing(1)
+    marginTop: theme.spacing(1),
+    textAlign: 'center',
   }
 }))
 
 function Chat(props) {
   const classes = useStyles()
-  const { startArtyom } = props
+  const { messages, status, start } = props
 
   return (
     <Paper className={classes.root}>
@@ -36,13 +37,15 @@ function Chat(props) {
 
         <Grid item>
           <Grid container direction='column'>
-            <Message message={{ text: 'Esse é um exemplo de mensagem enviada pelo assistente', user: 'A' }} />
-            <Message message={{ text: 'Esse é um exemplo de mensagem enviada pelo Doctor', user: 'D' }} />
+            {messages.map((m, k) => (
+              <Message message={m} key={k} />
+            ))}
           </Grid>
         </Grid>
 
         <Grid item>
-          <Typography className={classes.listening}>Ouvindo...</Typography>
+          {status.active && <Typography className={classes.listening}>Ouvindo...</Typography>}
+          {!status.active && <Button onClick={start} color='primary' variant='contained' fullWidth>Iniciar</Button>}
         </Grid>
       </Grid>
     </Paper>
