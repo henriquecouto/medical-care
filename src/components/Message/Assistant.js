@@ -13,7 +13,7 @@ const useStyles = makeStyles(theme => ({
     marginRight: theme.spacing(1),
     borderRadius: 12,
     boxShadow: `0 1px 3px ${theme.palette.shadow}`,
-    maxWidth: '250px',
+    maxWidth: '220px',
   },
 }))
 

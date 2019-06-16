@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { makeStyles } from '@material-ui/styles'
-import { Paper, Input, Typography, Grid, Button } from '@material-ui/core'
+import { Paper, Input, Typography, Grid, Button, GridList } from '@material-ui/core'
 
 import Message from '../Message';
 
@@ -10,7 +10,7 @@ const useStyles = makeStyles(theme => ({
     padding: theme.spacing(2, 2),
   },
   grid: {
-    height: '100%'
+    height: '95%'
   },
   listening: {
     ...theme.typography.button,
@@ -19,6 +19,9 @@ const useStyles = makeStyles(theme => ({
     borderRadius: 3,
     marginTop: theme.spacing(1),
     textAlign: 'center',
+  },
+  gridList: {
+    maxHeight: 600
   }
 }))
 
@@ -28,6 +31,9 @@ function Chat(props) {
 
   return (
     <Paper className={classes.root}>
+      <Typography variant="h5" component="h3">
+        Assistente
+      </Typography>
       <Grid
         container
         direction='column'
@@ -36,11 +42,11 @@ function Chat(props) {
       >
 
         <Grid item>
-          <Grid container direction='column'>
+          <GridList className={classes.gridList} cols={1}>
             {messages.map((m, k) => (
               <Message message={m} key={k} />
             ))}
-          </Grid>
+          </GridList>
         </Grid>
 
         <Grid item>

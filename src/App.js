@@ -6,12 +6,8 @@ import { createMuiTheme } from '@material-ui/core/styles'
 import Header from './components/Header'
 import Chat from './components/Chat'
 
-import AssistantCommandsManager from './utils/artyom'
-
 import artyom from 'artyom.js'
 const Assistant = new artyom()
-
-const CommandsManager = new AssistantCommandsManager(Assistant)
 
 const theme = createMuiTheme({
   palette: {
@@ -30,7 +26,18 @@ const useStyles = makeStyles({
   }
 })
 
+const messages = []
+
 function App() {
+  
+  const [lastMessage, setLastMessage] = useState(null)
+  const [assistantStatus, setAssistantStatus] = useState({ active: false, error: false })
+  const classes = useStyles()
+
+  const addMessage = (message) => {
+    messages.push(message)
+    setLastMessage(message)
+  }
 
   const startAssistant = () => {
     Assistant.initialize({
@@ -38,26 +45,50 @@ function App() {
       continuous: true,
       listen: true,
       debug: true,
+      obeyKeyword: "assistente"
     }).then(() => {
-      setAssistantStatus({...assistantStatus, active: true})
-      CommandsManager.loadCommands()
+      setAssistantStatus({ ...assistantStatus, active: true })
+      Assistant.dontObey()
+      // CommandsManager.loadCommands()
     }).catch(() => {
-      setAssistantStatus({...assistantStatus, active: false, error: true})      
+      setAssistantStatus({ ...assistantStatus, active: false, error: true })
     })
-
   }
 
   Assistant.redirectRecognizedTextOutput((text, isFinal) => {
     if (isFinal) {
       const newMessage = { text, user: 'D' }
-      setMessages([...messages, newMessage])
+      addMessage(newMessage)
     }
   })
 
-  const [messages, setMessages] = useState([])
-  const [assistantStatus, setAssistantStatus] = useState({ active: false, error: false })
+  Assistant.on(['Assistente está aí', 'Assistente tá aí']).then(() => {
+    const speech = `Olá, em que posso ajudar?`
+    
+    Assistant.dontObey()
+    Assistant.say(speech)
+    
+    addMessage({ text: speech, user: 'A' })
+  })
 
-  const classes = useStyles()
+  Assistant.on(['assistente quero fazer *'], true).then((i, wildcard) => {
+    const speech = `Estou preparando ${wildcard}, só um segundo`
+
+    Assistant.dontObey()
+    Assistant.say(speech)
+    
+    addMessage({ text: speech, user: 'A' })
+  })
+
+  Assistant.on(['assistente o paciente *'], true).then(() => {
+    const speech = `Só um segundo, estou anotando`
+    
+    Assistant.dontObey()
+    Assistant.say(speech)
+
+    addMessage({ text: speech, user: 'A' })
+  })
+
   return (
     <ThemeProvider theme={theme}>
       <Header title='Novo Atendimento' />
@@ -68,6 +99,7 @@ function App() {
         <Grid item xs={3}>
           <Chat messages={messages} status={assistantStatus} start={startAssistant} />
         </Grid>
+        {/* {console.log(messages)} */}
       </Grid>
     </ThemeProvider>
   )

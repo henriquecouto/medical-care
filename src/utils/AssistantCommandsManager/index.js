@@ -10,7 +10,31 @@ export default class AssistantCommandsManager {
       {
         indexes: ['Assistente está aí', 'Assistente tá aí'],
         action: i => {
+          Assistant.dontObey()
           Assistant.say('Olá, em que posso ajudar?')
+        }
+      },
+      {
+        smart: true,
+        indexes: ['assistente quero fazer *'],
+        action: (i, wildcard) => {
+          Assistant.dontObey()
+          Assistant.say(`Olá, estou preparando ${wildcard}, só um segundo`)
+        }
+      },
+      {
+        smart: true,
+        indexes: ['assistente o paciente *'],
+        action: (i, wildcard) => {
+          Assistant.dontObey()
+          Assistant.say(`Só um segundo, estou anotando`, {
+            onStart: () => {
+              console.log('iniciando cadastro anamnese')
+            },
+            onEnd: () => {
+              console.log('cadastro anamnese')
+            }
+          })
         }
       },
     ])
