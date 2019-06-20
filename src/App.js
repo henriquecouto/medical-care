@@ -62,23 +62,29 @@ const pacientes = [
   }
 ]
 
-const messages = []
 
 function App() {
 
-  const [lastMessage, setLastMessage] = useState(null)
+  const [messages, setMessages] = useState([])
   const [assistantStatus, setAssistantStatus] = useState({ active: false, error: false })
   const [sintomas, setSintomas] = useState([])
-  const [paciente, setPaciente] = useState({})
+  const [paciente, setPaciente] = useState(null)
 
   const classes = useStyles()
 
-  const addMessage = (message) => {
-    messages.push(message)
-    setLastMessage(message)
+  function addMessage(newMessage) {
+    setMessages(messages => [...messages, newMessage])
   }
 
-  const startAssistant = () => {
+  function addSintoma(sintoma) {
+    setSintomas(sintomas => [...sintomas, sintoma])
+  }
+
+  function handlePaciente(p) {
+    setPaciente(paciente => p)
+  }
+
+  function startAssistant() {
     Assistant.initialize({
       lang: "pt-PT",
       continuous: true,
@@ -94,77 +100,108 @@ function App() {
     })
   }
 
-  Assistant.redirectRecognizedTextOutput((text, isFinal) => {
-    if (isFinal) {
-      const newMessage = { text, user: 'D' }
-      addMessage(newMessage)
-    }
-  })
-
-  Assistant.on(['assistente está aí', 'assistente tá aí']).then(() => {
-    const speech = `Olá, em que posso ajudar?`
-
-    Assistant.dontObey()
-    Assistant.say(speech)
-
-    addMessage({ text: speech, user: 'A' })
-  })
-
-  Assistant.on(['assistente quero fazer *'], true).then((i, wildcard) => {
-    const speech = `Estou preparando ${wildcard}, só um segundo`
-
-    Assistant.dontObey()
-    Assistant.say(speech)
-
-    addMessage({ text: speech, user: 'A' })
-  })
-
-  Assistant.on(['assistente o paciente relatou *'], true).then(() => {
-    const speech = `Só um segundo, estou anotando`
-
-    Assistant.dontObey()
-    Assistant.say(speech)
-
-    addMessage({ text: speech, user: 'A' })
-  })
-
-  Assistant.on(['assistente selecione o paciente *'], true).then((i, wildcard) => {
-    const speech = `Buscando paciente ${wildcard}, um momento...`
-    Assistant.dontObey()
-
-    Assistant.say(speech, {
-      onStart: () => addMessage({ text: speech, user: 'A' }),
-      onEnd: async () => {
-        const search = await pacientes.filter(p => p.nome == wildcard)
-
-        if (search[0] == undefined) {
-          const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`
-          addMessage({ text: speech, user: 'A' })
-          Assistant.say(speech)
-        } else {
-          const speech = `Paciente ${wildcard} encontrado!`
-
-          Assistant.say(speech, {
-            onStart: () => { addMessage({ text: speech, user: 'A' }); setPaciente(search[0]) }
-          })
-
-        }
+  // Componente montado
+  useEffect(() => {
+    Assistant.redirectRecognizedTextOutput((text, isFinal) => {
+      if (isFinal) {
+        const newMessage = { text, user: 'D' }
+        addMessage(newMessage)
       }
     })
 
-  })
+    Assistant.on(['assistente está aí', 'assistente tá aí']).then(() => {
+
+      const speech = `Olá, em que posso ajudar?`
+
+      Assistant.dontObey()
+      Assistant.say(speech, {
+        onStart: function () {
+          addMessage({ text: speech, user: 'A' })
+        }
+      })
+
+    })
+
+    Assistant.on(['assistente quero fazer *'], true).then((i, wildcard) => {
+      const speech = `Estou preparando ${wildcard}, só um segundo`
+
+      Assistant.dontObey()
+      Assistant.say(speech, {
+        onStart: function () { addMessage({ text: speech, user: 'A' }) }
+      })
+
+    })
+
+    Assistant.on(['assistente o paciente relatou *'], true).then(() => {
+      const speech = `Só um segundo, estou anotando`
+
+      Assistant.dontObey()
+      Assistant.say(speech, {
+        onStart: function () { addMessage({ text: speech, user: 'A' }) }
+      })
+
+    })
+
+    Assistant.on(['assistente selecione o paciente *'], true).then((i, wildcard) => {
+      const speech = `Buscando paciente ${wildcard}, um momento...`
+      Assistant.dontObey()
+
+      Assistant.say(speech, {
+        onStart: function () { addMessage({ text: speech, user: 'A' }) },
+        onEnd: async () => {
+          const search = await pacientes.filter(p => p.nome == wildcard)
+
+          if (search[0] == undefined) {
+            const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`
+            Assistant.say(speech, {
+              onStart: function () { addMessage({ text: speech, user: 'A' }) }
+            })
+          } else {
+            const speech = `Paciente ${wildcard} encontrado!`
+
+            Assistant.say(speech, {
+              onStart: function () {
+                addMessage({ text: speech, user: 'A' })
+                setPaciente(paciente => search[0])
+              }
+            })
+
+          }
+        }
+      })
+    })
+
+  }, [])
+
+  useEffect(() => {
+    Assistant.on(['assistente adicione o sintoma *', 'assistente adicione os sintomas *'], true).then((i, wildcard) => {
+      Assistant.dontObey()
+      let speech
+      // if (paciente) {
+      speech = i === 0 ? `anotando o sintoma ${wildcard}` : `anotando os sintomas ${wildcard}`
+      const sintomas = wildcard.split(',')
+
+      Assistant.say(speech, {
+        onStart: function () { addMessage({ text: speech, user: 'A' }) },
+        onEnd: function () {
+          sintomas.forEach(s => {
+            addSintoma(s)
+          })
+        }
+      })
+    })
+  }, [paciente])
 
   return (
     <ThemeProvider theme={theme}>
       <Header title='Novo Atendimento' />
       <Grid container className={classes.grid} spacing={2}>
         <Grid item xs={9}>
-          <Atendimento paciente={paciente} />
+          <Atendimento paciente={paciente} sintomas={sintomas} />
         </Grid>
         <Grid item xs={3}>
           <Chat messages={messages} status={assistantStatus} start={startAssistant} />
         </Grid>
-        {/* {console.log(messages)} */}
       </Grid>
     </ThemeProvider>
   )

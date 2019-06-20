@@ -43,7 +43,7 @@ function Chat(props) {
 
         <Grid item>
           <GridList className={classes.gridList} cols={1}>
-            {messages.map((m, k) => (
+            {messages && messages.map((m, k) => (
               <Message message={m} key={k} />
             ))}
           </GridList>
