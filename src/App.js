@@ -6,9 +6,12 @@ import { createMuiTheme } from '@material-ui/core/styles'
 import Header from './components/Header'
 import Chat from './components/Chat'
 
+import { AttendanceProvider } from './utils/Contexts'
+
 import artyom from 'artyom.js'
 import Atendimento from './components/Atendimento'
 const Assistant = new artyom()
+
 
 const theme = createMuiTheme({
   palette: {
@@ -27,7 +30,7 @@ const useStyles = makeStyles({
   }
 })
 
-const pacientes = [
+const patients = [
   {
     nome: 'henrique couto',
     idade: 20,
@@ -67,8 +70,17 @@ function App() {
 
   const [messages, setMessages] = useState([])
   const [assistantStatus, setAssistantStatus] = useState({ active: false, error: false })
-  const [sintomas, setSintomas] = useState([])
-  const [paciente, setPaciente] = useState(null)
+  const [symptoms, setSymptoms] = useState([])
+  const [patient, setPatient] = useState(null)
+  const [anamnese, setAnamnese] = useState('')
+  const [exams, setExams] = useState('')
+
+  const attendance = {
+    patient,
+    symptoms,
+    anamnese,
+    exams
+  }
 
   const classes = useStyles()
 
@@ -76,12 +88,12 @@ function App() {
     setMessages(messages => [...messages, newMessage])
   }
 
-  function addSintoma(sintoma) {
-    setSintomas(sintomas => [...sintomas, sintoma])
+  function addSymptom(symptom) {
+    setSymptoms(symptoms => [...symptoms, symptom])
   }
 
-  function handlePaciente(p) {
-    setPaciente(paciente => p)
+  function handlePatient(p) {
+    setPatient(patient => p)
   }
 
   function startAssistant() {
@@ -149,7 +161,7 @@ function App() {
       Assistant.say(speech, {
         onStart: function () { addMessage({ text: speech, user: 'A' }) },
         onEnd: async () => {
-          const search = await pacientes.filter(p => p.nome == wildcard)
+          const search = await patients.filter(p => p.nome == wildcard)
 
           if (search[0] == undefined) {
             const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`
@@ -162,7 +174,7 @@ function App() {
             Assistant.say(speech, {
               onStart: function () {
                 addMessage({ text: speech, user: 'A' })
-                setPaciente(paciente => search[0])
+                handlePatient(search[0])
               }
             })
 
@@ -179,30 +191,34 @@ function App() {
       let speech
       // if (paciente) {
       speech = i === 0 ? `anotando o sintoma ${wildcard}` : `anotando os sintomas ${wildcard}`
-      const sintomas = wildcard.split(',')
+      const symptoms = wildcard.split(',')
 
       Assistant.say(speech, {
         onStart: function () { addMessage({ text: speech, user: 'A' }) },
         onEnd: function () {
-          sintomas.forEach(s => {
-            addSintoma(s)
+          symptoms.forEach(s => {
+            addSymptom(s)
           })
         }
       })
     })
-  }, [paciente])
+  }, [patient])
 
   return (
     <ThemeProvider theme={theme}>
-      <Header title='Novo Atendimento' />
-      <Grid container className={classes.grid} spacing={2}>
-        <Grid item xs={9}>
-          <Atendimento paciente={paciente} sintomas={sintomas} />
+      <AttendanceProvider value={attendance}>
+
+        <Header title='Novo Atendimento' />
+        <Grid container className={classes.grid} spacing={2}>
+          <Grid item xs={9}>
+            <Atendimento />
+          </Grid>
+          <Grid item xs={3}>
+            <Chat messages={messages} status={assistantStatus} start={startAssistant} />
+          </Grid>
         </Grid>
-        <Grid item xs={3}>
-          <Chat messages={messages} status={assistantStatus} start={startAssistant} />
-        </Grid>
-      </Grid>
+
+      </AttendanceProvider>
     </ThemeProvider>
   )
 }
