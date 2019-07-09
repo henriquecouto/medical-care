@@ -137,7 +137,7 @@ function App() {
 
         Assistant.dontObey();
         Assistant.say(speech, {
-          onStart: function() {
+          onStart: function () {
             addMessage({ text: speech, user: "A" });
           },
           onEnd: () => {
@@ -153,7 +153,7 @@ function App() {
         Assistant.dontObey();
 
         Assistant.say(speech, {
-          onStart: function() {
+          onStart: function () {
             addMessage({ text: speech, user: "A" });
           },
           onEnd: async () => {
@@ -162,7 +162,7 @@ function App() {
             if (search[0] === undefined) {
               const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`;
               Assistant.say(speech, {
-                onStart: function() {
+                onStart: function () {
                   addMessage({ text: speech, user: "A" });
                 }
               });
@@ -170,7 +170,7 @@ function App() {
               const speech = `Paciente ${wildcard} encontrado!`;
 
               Assistant.say(speech, {
-                onStart: function() {
+                onStart: function () {
                   addMessage({ text: speech, user: "A" });
                   handlePatient(search[0]);
                 }
@@ -194,16 +194,17 @@ function App() {
       const symptoms = wildcard.split(",");
 
       Assistant.say(speech, {
-        onStart: function() {
+        onStart: function () {
           addMessage({ text: speech, user: "A" });
         },
-        onEnd: function() {
+        onEnd: function () {
           symptoms.forEach(s => {
             addSymptom(s);
           });
         }
       });
     });
+
     Assistant.on(
       ["assistente adicione o exame *", "assistente adicione os exames *"],
       true
@@ -218,16 +219,33 @@ function App() {
       const exams = wildcard.split(",");
 
       Assistant.say(speech, {
-        onStart: function() {
+        onStart: function () {
           addMessage({ text: speech, user: "A" });
         },
-        onEnd: function() {
+        onEnd: function () {
           exams.forEach(s => {
             addExam(s);
           });
         }
       });
     });
+
+    Assistant.on(['*'], true).then(() => {
+      Assistant.dontObey();
+      let speech;
+      speech = `Comando não reconhecido`;
+
+      Assistant.say(speech, {
+        onStart: function () {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: function () {
+          exams.forEach(s => {
+            addExam(s);
+          });
+        }
+      });
+    })
   }, []);
 
   return (
