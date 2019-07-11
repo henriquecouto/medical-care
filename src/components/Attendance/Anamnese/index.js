@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { Grid, Typography, Chip } from "@material-ui/core";
 
-import AttendanceContext from "../../../utils/Contexts";
+import StoreContext from "../../../utils/Contexts";
 
 export default () => {
-  const { anamnese } = useContext(AttendanceContext);
+  const { attendance: { anamnese } } = useContext(StoreContext);
 
   return (
     <Grid container>

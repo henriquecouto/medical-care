@@ -1,7 +1,7 @@
 import React from 'react'
 
-const AttendanceContext = React.createContext({})
+const StoreContext = React.createContext({})
 
-export const AttendanceProvider = AttendanceContext.Provider
-export const AttendanceConsumer = AttendanceContext.Consumer
-export default AttendanceContext
+export const StoreProvider = StoreContext.Provider
+export const StoreConsumer = StoreContext.Consumer
+export default StoreContext

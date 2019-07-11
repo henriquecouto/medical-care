@@ -2,14 +2,19 @@ import React, { useEffect, useState } from "react";
 import { makeStyles, ThemeProvider } from "@material-ui/styles";
 import { Grid, Button } from "@material-ui/core";
 import { createMuiTheme } from "@material-ui/core/styles";
+import { BrowserRouter as Router, Route, Redirect } from "react-router-dom";
 
 import Header from "./components/Header";
 import Chat from "./components/Chat";
 
-import { AttendanceProvider } from "./utils/Contexts";
+import { StoreProvider } from "./utils/Contexts";
 
 import artyom from "artyom.js";
-import Atendimento from "./components/Atendimento";
+import Attendance from "./components/Attendance";
+import Patients from "./components/Patients";
+
+import { firestore } from "./utils/Firebase";
+
 const Assistant = new artyom();
 
 const theme = createMuiTheme({
@@ -29,57 +34,28 @@ const useStyles = makeStyles({
   }
 });
 
-const patients = [
-  {
-    nome: "henrique couto",
-    idade: 20,
-    info: "Alguma informação relevante",
-    info1: "Alguma informação relevante",
-    info2: "Alguma informação relevante",
-    info3: "Alguma informação relevante"
-  },
-  {
-    nome: "richard souza",
-    idade: 20,
-    info: "Alguma informação relevante",
-    info1: "Alguma informação relevante",
-    info2: "Alguma informação relevante",
-    info3: "Alguma informação relevante"
-  },
-  {
-    nome: "ítalo lima",
-    idade: 20,
-    info: "Alguma informação relevante",
-    info1: "Alguma informação relevante",
-    info2: "Alguma informação relevante",
-    info3: "Alguma informação relevante"
-  },
-  {
-    nome: "andré magno",
-    idade: 20,
-    info: "Alguma informação relevante",
-    info1: "Alguma informação relevante",
-    info2: "Alguma informação relevante",
-    info3: "Alguma informação relevante"
-  }
-];
-
 function App() {
   const [messages, setMessages] = useState([]);
   const [assistantStatus, setAssistantStatus] = useState({
     active: false,
     error: false
   });
+  const [position, setPosition] = useState('Pacientes');
+  const [patients, setPatients] = useState([]);
   const [symptoms, setSymptoms] = useState([]);
   const [patient, setPatient] = useState(null);
   const [anamnese, setAnamnese] = useState("");
   const [exams, setExams] = useState([]);
+  const [redirect, setRedirect] = useState({ state: false });
 
-  const attendance = {
-    patient,
-    symptoms,
-    anamnese,
-    exams
+  const store = {
+    attendance: {
+      patient,
+      symptoms,
+      anamnese,
+      exams
+    },
+    patients,
   };
 
   const classes = useStyles();
@@ -100,8 +76,19 @@ function App() {
     setAnamnese(anamnese => `${anamnese} ${text}`);
   }
 
-  function handlePatient(p) {
-    setPatient(patient => p);
+  function searchPatient(info, onSuccess, onError) {
+    firestore.collection('patients').where('name', '==', info).get().then(querySnapshot => {
+      const findedPatients = []
+      querySnapshot.forEach(doc => {
+        findedPatients.push({ id: doc.id, ...doc.data() })
+      })
+      if (findedPatients[0]) {
+        setPatient(findedPatients[0])
+        onSuccess()
+      } else {
+        onError()
+      }
+    })
   }
 
   function startAssistant() {
@@ -122,6 +109,71 @@ function App() {
       });
   }
 
+  function loadPatients() {
+    firestore.collection('patients').get().then(function (querySnapshot) {
+      const loadedPatients = []
+      querySnapshot.forEach(function (doc) {
+        loadedPatients.push({ id: doc.id, ...doc.data() })
+      })
+      setPatients(loadedPatients)
+    })
+  }
+
+  function handleRedirect(state, path) {
+    setRedirect({ state, path })
+  }
+
+  useEffect(() => {
+    loadPatients()
+  })
+
+  useEffect(() => {
+    Assistant.on([
+      "assistente prepare um atendimento para o paciente *",
+      "assistente prepara um atendimento para o paciente *",
+      "assistente inicie o atendimento do paciente *",
+      "assistente inicia o atendimento do paciente *",
+    ], true).then(
+      (i, wildcard) => {
+        let speech = `Preparando atendimento, um momento...`;
+        Assistant.dontObey();
+
+        Assistant.say(speech, {
+          onStart: function () {
+            addMessage({ text: speech, user: "A" });
+          },
+          onEnd: () => {
+
+            const onSuccess = () => {
+              const speech = `Atendimento de ${wildcard} iniciado!`;
+              Assistant.say(speech, {
+                onStart: function () {
+                  addMessage({ text: speech, user: "A" });
+                  handleRedirect(true, '/atendimento');
+                  setPosition(() => 'Novo atendimento')
+                },
+                onEnd: function () {
+                  handleRedirect(false);
+                }
+              });
+            }
+
+            const onError = () => {
+              const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`;
+              Assistant.say(speech, {
+                onStart: function () {
+                  addMessage({ text: speech, user: "A" });
+                }
+              });
+            }
+
+            searchPatient(wildcard, onSuccess, onError)
+          }
+        });
+      }
+    );
+  }, [])
+
   // Componente montado
   useEffect(() => {
     Assistant.redirectRecognizedTextOutput((text, isFinal) => {
@@ -131,55 +183,21 @@ function App() {
       }
     });
 
-    Assistant.on(["assistente o paciente relatou *"], true).then(
-      (i, wildcard) => {
-        const speech = `Só um segundo, estou anotando`;
+    Assistant.on(["assistente o paciente relatou *"], true).then((i, wildcard) => {
+      const speech = `Só um segundo, estou anotando`;
 
-        Assistant.dontObey();
-        Assistant.say(speech, {
-          onStart: function () {
-            addMessage({ text: speech, user: "A" });
-          },
-          onEnd: () => {
-            handleAnamnese(wildcard);
-          }
-        });
-      }
+      Assistant.dontObey();
+      Assistant.say(speech, {
+        onStart: function () {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: () => {
+          handleAnamnese(wildcard);
+        }
+      });
+    }
     );
 
-    Assistant.on(["assistente selecione o paciente *"], true).then(
-      (i, wildcard) => {
-        const speech = `Buscando paciente ${wildcard}, um momento...`;
-        Assistant.dontObey();
-
-        Assistant.say(speech, {
-          onStart: function () {
-            addMessage({ text: speech, user: "A" });
-          },
-          onEnd: async () => {
-            const search = await patients.filter(p => p.nome === wildcard);
-
-            if (search[0] === undefined) {
-              const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`;
-              Assistant.say(speech, {
-                onStart: function () {
-                  addMessage({ text: speech, user: "A" });
-                }
-              });
-            } else {
-              const speech = `Paciente ${wildcard} encontrado!`;
-
-              Assistant.say(speech, {
-                onStart: function () {
-                  addMessage({ text: speech, user: "A" });
-                  handlePatient(search[0]);
-                }
-              });
-            }
-          }
-        });
-      }
-    );
     Assistant.on(
       ["assistente adicione o sintoma *", "assistente adicione os sintomas *"],
       true
@@ -249,23 +267,27 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <AttendanceProvider value={attendance}>
-        <Header title="Novo Atendimento" />
-        <Grid container className={classes.grid} spacing={2}>
-          <Grid item xs={9}>
-            <Atendimento />
+    <Router>
+      <ThemeProvider theme={theme}>
+        <StoreProvider value={store}>
+          <Header title={position} />
+          <Grid container className={classes.grid} spacing={2}>
+            <Grid item xs={9}>
+              {redirect.state && <Redirect to={redirect.path} />}
+              <Route exact path='/' component={Patients} />
+              <Route path='/atendimento' component={Attendance} />
+            </Grid>
+            <Grid item xs={3}>
+              <Chat
+                messages={messages}
+                status={assistantStatus}
+                start={startAssistant}
+              />
+            </Grid>
           </Grid>
-          <Grid item xs={3}>
-            <Chat
-              messages={messages}
-              status={assistantStatus}
-              start={startAssistant}
-            />
-          </Grid>
-        </Grid>
-      </AttendanceProvider>
-    </ThemeProvider>
+        </StoreProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 
