@@ -40,7 +40,7 @@ function App() {
     active: false,
     error: false
   });
-  const [position, setPosition] = useState('Pacientes');
+  const [position, setPosition] = useState("Pacientes");
   const [patients, setPatients] = useState([]);
   const [symptoms, setSymptoms] = useState([]);
   const [patient, setPatient] = useState(null);
@@ -55,7 +55,7 @@ function App() {
       anamnese,
       exams
     },
-    patients,
+    patients
   };
 
   const classes = useStyles();
@@ -72,23 +72,31 @@ function App() {
     setExams(exams => [...exams, exam]);
   }
 
+  function finalize() {
+    firestore.collection("consultation").add(store.attendance);
+  }
+
   function handleAnamnese(text) {
     setAnamnese(anamnese => `${anamnese} ${text}`);
   }
 
   function searchPatient(info, onSuccess, onError) {
-    firestore.collection('patients').where('name', '==', info).get().then(querySnapshot => {
-      const findedPatients = []
-      querySnapshot.forEach(doc => {
-        findedPatients.push({ id: doc.id, ...doc.data() })
-      })
-      if (findedPatients[0]) {
-        setPatient(findedPatients[0])
-        onSuccess()
-      } else {
-        onError()
-      }
-    })
+    firestore
+      .collection("patients")
+      .where("name", "==", info)
+      .get()
+      .then(querySnapshot => {
+        const findedPatients = [];
+        querySnapshot.forEach(doc => {
+          findedPatients.push({ id: doc.id, ...doc.data() });
+        });
+        if (findedPatients[0]) {
+          setPatient(findedPatients[0]);
+          onSuccess();
+        } else {
+          onError();
+        }
+      });
   }
 
   function startAssistant() {
@@ -110,72 +118,87 @@ function App() {
   }
 
   function loadPatients() {
-    firestore.collection('patients').get().then(function (querySnapshot) {
-      const loadedPatients = []
-      querySnapshot.forEach(function (doc) {
-        loadedPatients.push({ id: doc.id, ...doc.data() })
-      })
-      setPatients(loadedPatients)
-    })
+    firestore
+      .collection("patients")
+      .get()
+      .then(function(querySnapshot) {
+        const loadedPatients = [];
+        querySnapshot.forEach(function(doc) {
+          loadedPatients.push({ id: doc.id, ...doc.data() });
+        });
+        setPatients(loadedPatients);
+      });
   }
 
   function handleRedirect(state, path) {
-    setRedirect({ state, path })
+    setRedirect({ state, path });
   }
 
   useEffect(() => {
-    loadPatients()
-  })
+    loadPatients();
+  });
 
   useEffect(() => {
-    Assistant.on([
-      "assistente prepare um atendimento para o paciente *",
-      "assistente prepara um atendimento para o paciente *",
-      "assistente inicie o atendimento do paciente *",
-      "assistente inicia o atendimento do paciente *",
-    ], true).then(
-      (i, wildcard) => {
-        let speech = `Preparando atendimento, um momento...`;
-        Assistant.dontObey();
+    Assistant.on(["assistente finalize o aten*"], true).then(() => {
+      Assistant.dontObey();
 
-        Assistant.say(speech, {
-          onStart: function () {
-            addMessage({ text: speech, user: "A" });
-          },
-          onEnd: () => {
+      let speech = "Finalizando atendimento...";
 
-            const onSuccess = () => {
-              const speech = `Atendimento de ${wildcard} iniciado!`;
-              Assistant.say(speech, {
-                onStart: function () {
-                  addMessage({ text: speech, user: "A" });
-                  handleRedirect(true, '/atendimento');
-                  setPosition(() => 'Novo atendimento')
-                },
-                onEnd: function () {
-                  handleRedirect(false);
-                }
-              });
-            }
+      Assistant.say(speech, {
+        onStart: function() {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: function() {
+          document.getElementById("finalize").click();
+        }
+      });
+    });
 
-            const onError = () => {
-              const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`;
-              Assistant.say(speech, {
-                onStart: function () {
-                  addMessage({ text: speech, user: "A" });
-                }
-              });
-            }
+    Assistant.on(
+      [
+        "assistente prepare um atendimento para o paciente *",
+        "assistente prepara um atendimento para o paciente *",
+        "assistente inicie o atendimento do paciente *",
+        "assistente inicia o atendimento do paciente *"
+      ],
+      true
+    ).then((i, wildcard) => {
+      let speech = `Preparando atendimento, um momento...`;
+      Assistant.dontObey();
 
-            searchPatient(wildcard, onSuccess, onError)
-          }
-        });
-      }
-    );
-  }, [])
+      Assistant.say(speech, {
+        onStart: function() {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: () => {
+          const onSuccess = () => {
+            const speech = `Atendimento de ${wildcard} iniciado!`;
+            Assistant.say(speech, {
+              onStart: function() {
+                addMessage({ text: speech, user: "A" });
+                handleRedirect(true, "/atendimento");
+                setPosition(() => "Novo atendimento");
+              },
+              onEnd: function() {
+                handleRedirect(false);
+              }
+            });
+          };
 
-  // Componente montado
-  useEffect(() => {
+          const onError = () => {
+            const speech = `Não encontrei o paciente ${wildcard}, poderia tentar novamente?`;
+            Assistant.say(speech, {
+              onStart: function() {
+                addMessage({ text: speech, user: "A" });
+              }
+            });
+          };
+
+          searchPatient(wildcard, onSuccess, onError);
+        }
+      });
+    });
+
     Assistant.redirectRecognizedTextOutput((text, isFinal) => {
       if (isFinal) {
         const newMessage = { text, user: "D" };
@@ -183,19 +206,20 @@ function App() {
       }
     });
 
-    Assistant.on(["assistente o paciente relatou *"], true).then((i, wildcard) => {
-      const speech = `Só um segundo, estou anotando`;
+    Assistant.on(["assistente o paciente relatou *"], true).then(
+      (i, wildcard) => {
+        const speech = `Só um segundo, estou anotando`;
 
-      Assistant.dontObey();
-      Assistant.say(speech, {
-        onStart: function () {
-          addMessage({ text: speech, user: "A" });
-        },
-        onEnd: () => {
-          handleAnamnese(wildcard);
-        }
-      });
-    }
+        Assistant.dontObey();
+        Assistant.say(speech, {
+          onStart: function() {
+            addMessage({ text: speech, user: "A" });
+          },
+          onEnd: () => {
+            handleAnamnese(wildcard);
+          }
+        });
+      }
     );
 
     Assistant.on(
@@ -212,17 +236,19 @@ function App() {
       const symptoms = wildcard.split(",");
 
       Assistant.say(speech, {
-        onStart: function () {
+        onStart: function() {
           addMessage({ text: speech, user: "A" });
         },
-        onEnd: function () {
+        onEnd: function() {
           symptoms.forEach(s => {
             addSymptom(s);
           });
         }
       });
     });
+  }, []);
 
+  useEffect(() => {
     Assistant.on(
       ["assistente adicione o exame *", "assistente adicione os exames *"],
       true
@@ -237,10 +263,10 @@ function App() {
       const exams = wildcard.split(",");
 
       Assistant.say(speech, {
-        onStart: function () {
+        onStart: function() {
           addMessage({ text: speech, user: "A" });
         },
-        onEnd: function () {
+        onEnd: function() {
           exams.forEach(s => {
             addExam(s);
           });
@@ -248,23 +274,23 @@ function App() {
       });
     });
 
-    Assistant.on(['*'], true).then(() => {
+    Assistant.on(["*"], true).then(() => {
       Assistant.dontObey();
       let speech;
       speech = `Comando não reconhecido`;
 
       Assistant.say(speech, {
-        onStart: function () {
+        onStart: function() {
           addMessage({ text: speech, user: "A" });
         },
-        onEnd: function () {
+        onEnd: function() {
           exams.forEach(s => {
             addExam(s);
           });
         }
       });
-    })
-  }, []);
+    });
+  }, [exams]);
 
   return (
     <Router>
@@ -274,8 +300,8 @@ function App() {
           <Grid container className={classes.grid} spacing={2}>
             <Grid item xs={9}>
               {redirect.state && <Redirect to={redirect.path} />}
-              <Route exact path='/' component={Patients} />
-              <Route path='/atendimento' component={Attendance} />
+              <Route exact path="/" component={Patients} />
+              <Route path="/atendimento" component={Attendance} />
             </Grid>
             <Grid item xs={3}>
               <Chat
@@ -283,6 +309,13 @@ function App() {
                 status={assistantStatus}
                 start={startAssistant}
               />
+              <Button
+                onClick={finalize}
+                id="finalize"
+                style={{ display: "none" }}
+              >
+                Finalizar
+              </Button>
             </Grid>
           </Grid>
         </StoreProvider>
