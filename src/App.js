@@ -14,6 +14,7 @@ import Attendance from "./components/Attendance";
 import Patients from "./components/Patients";
 
 import { firestore } from "./utils/Firebase";
+import Attendances from "./components/Attendances";
 
 const Assistant = new artyom();
 
@@ -73,7 +74,21 @@ function App() {
   }
 
   function finalize() {
-    firestore.collection("consultation").add(store.attendance);
+    return firestore
+      .collection("consultation")
+      .add(store.attendance)
+      .then(() => {
+        const speech = "Atendimento finalizado com sucesso!";
+        Assistant.say(speech, {
+          onStart: function() {
+            addMessage({ text: speech, user: "A" });
+          },
+          onEnd: function() {
+            setPosition("Consultas");
+            handleRedirect(true, "/atendimentos");
+          }
+        });
+      });
   }
 
   function handleAnamnese(text) {
@@ -158,6 +173,8 @@ function App() {
       [
         "assistente prepare um atendimento para o paciente *",
         "assistente prepara um atendimento para o paciente *",
+        "assistente inicie um atendimento para o paciente *",
+        "assistente inicia um atendimento para o paciente *",
         "assistente inicie o atendimento do paciente *",
         "assistente inicia o atendimento do paciente *"
       ],
@@ -195,6 +212,44 @@ function App() {
           };
 
           searchPatient(wildcard, onSuccess, onError);
+        }
+      });
+    });
+
+    Assistant.on(
+      [
+        "assistente * atendimentos já realizados",
+        "assistente * atendimentos realizados",
+        "assistente * atendimentos"
+      ],
+      true
+    ).then(() => {
+      Assistant.dontObey();
+      let speech = "Estou verificando. Um momento...";
+      Assistant.say(speech, {
+        onStart: function() {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: function() {
+          setPosition("Consultas");
+          handleRedirect(true, "/atendimentos");
+        }
+      });
+    });
+
+    Assistant.on(
+      ["assistente * pacientes", "assistente * pacientes disponíveis"],
+      true
+    ).then(() => {
+      Assistant.dontObey();
+      let speech = "Estou verificando. Um momento...";
+      Assistant.say(speech, {
+        onStart: function() {
+          addMessage({ text: speech, user: "A" });
+        },
+        onEnd: function() {
+          setPosition("Pacientes");
+          handleRedirect(true, "/");
         }
       });
     });
@@ -302,6 +357,7 @@ function App() {
               {redirect.state && <Redirect to={redirect.path} />}
               <Route exact path="/" component={Patients} />
               <Route path="/atendimento" component={Attendance} />
+              <Route path="/atendimentos" component={Attendances} />
             </Grid>
             <Grid item xs={3}>
               <Chat

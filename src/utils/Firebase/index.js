@@ -1,4 +1,4 @@
-import firebase from 'firebase'
+import firebase from "firebase";
 
 const config = {
   apiKey: "AIzaSyBy078d7huPKB4poFIoRPO0QQg0vrsWrRU",
@@ -8,8 +8,8 @@ const config = {
   storageBucket: "medical-care-9a6e0.appspot.com",
   messagingSenderId: "908558084846",
   appId: "1:908558084846:web:a8f4bb670974a8c0"
-}
+};
 
-firebase.initializeApp(config)
+firebase.initializeApp(config);
 
-export const firestore = firebase.firestore()
+export const firestore = firebase.firestore();

@@ -16,7 +16,7 @@ const useStyles = makeStyles({
   }
 });
 
-export default function Atendimento() {
+export default function Attendance() {
   const classes = useStyles();
 
   return (
