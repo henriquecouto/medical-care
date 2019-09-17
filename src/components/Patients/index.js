@@ -11,7 +11,7 @@ import {
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 
-import { getDate } from "../../utils/date";
+// import { getDate } from "../../utils/date";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -29,7 +29,7 @@ const TableItem = ({ value }) => {
     <TableRow>
       <TableCell>{value.name.toUpperCase()}</TableCell>
       <TableCell>{value.gender === "m" ? "MASCULINO" : "FEMININO"}</TableCell>
-      <TableCell>{getDate(value.birthDate)}</TableCell>
+      <TableCell>{value.birthDate}</TableCell>
       <TableCell>{value.profession.toUpperCase()}</TableCell>
     </TableRow>
   );

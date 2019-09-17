@@ -54,7 +54,7 @@ export default () => {
             {patient.name.toUpperCase()}
           </Typography>
           <Typography variant="body1" className={classes.item}>
-            Data de nascimento: {getDate(patient.birthDate)}
+            Data de nascimento: {patient.birthDate}
           </Typography>
         </Grid>
         <Grid container alignItems="center">

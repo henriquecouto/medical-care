@@ -15,6 +15,8 @@ import Patients from "./components/Patients";
 
 import { firestore } from "./utils/Firebase";
 import Attendances from "./components/Attendances";
+import { baseApiUrl } from "./utils/urls";
+import Axios from "axios";
 
 const Assistant = new artyom();
 
@@ -52,6 +54,7 @@ function App() {
   const store = {
     attendance: {
       patient,
+      doctor: "5d79976dbfa133f7b498e19d",
       symptoms,
       anamnese,
       exams
@@ -74,9 +77,11 @@ function App() {
   }
 
   function finalize() {
-    return firestore
-      .collection("consultation")
-      .add(store.attendance)
+    const data = store.attendance;
+    data.patient = store.attendance.patient.id;
+    console.log(data);
+
+    Axios.post(`${baseApiUrl}/attendance/register`, data)
       .then(() => {
         const speech = "Atendimento finalizado com sucesso!";
         Assistant.say(speech, {
@@ -88,7 +93,8 @@ function App() {
             handleRedirect(true, "/atendimentos");
           }
         });
-      });
+      })
+      .catch(err => console.log(err));
   }
 
   function handleAnamnese(text) {
@@ -96,22 +102,18 @@ function App() {
   }
 
   function searchPatient(info, onSuccess, onError) {
-    firestore
-      .collection("patients")
-      .where("name", "==", info)
-      .get()
-      .then(querySnapshot => {
-        const findedPatients = [];
-        querySnapshot.forEach(doc => {
-          findedPatients.push({ id: doc.id, ...doc.data() });
-        });
-        if (findedPatients[0]) {
-          setPatient(findedPatients[0]);
+    Axios.post(`${baseApiUrl}/patient/search`, { name: info })
+      .then(({ data: { result } }) => {
+        console.log(result);
+        if (result) {
+          const findedPatient = { id: result._id.$oid, ...result.data };
+          setPatient(findedPatient);
           onSuccess();
         } else {
           onError();
         }
-      });
+      })
+      .catch(err => console.log(err));
   }
 
   function startAssistant() {
@@ -133,16 +135,15 @@ function App() {
   }
 
   function loadPatients() {
-    firestore
-      .collection("patients")
-      .get()
-      .then(function(querySnapshot) {
+    Axios.get(`${baseApiUrl}/patient/`)
+      .then(({ data: { result } }) => {
         const loadedPatients = [];
-        querySnapshot.forEach(function(doc) {
-          loadedPatients.push({ id: doc.id, ...doc.data() });
+        result.forEach(doc => {
+          loadedPatients.push({ id: doc._id.$oid, ...doc.data });
         });
         setPatients(loadedPatients);
-      });
+      })
+      .catch(err => console.log(err));
   }
 
   function handleRedirect(state, path) {
@@ -151,7 +152,7 @@ function App() {
 
   useEffect(() => {
     loadPatients();
-  });
+  }, []);
 
   useEffect(() => {
     Assistant.on(["assistente finalize o aten*"], true).then(() => {
