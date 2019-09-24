@@ -11,7 +11,6 @@ import {
 } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
 
-import { firestore } from "../../utils/Firebase";
 import Axios from "axios";
 import { baseApiUrl } from "../../utils/urls";
 
